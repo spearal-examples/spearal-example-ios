@@ -10,8 +10,6 @@ import SpearalIOS
 
 class DetailViewController: UIViewController {
     
-    private var activity:UIActivityIndicatorView = UIActivityIndicatorView(activityIndicatorStyle: .Gray)
-    
     @IBOutlet weak var nameText: UITextField!
     @IBOutlet weak var descriptionText: UITextField!
     @IBOutlet weak var imageUrlText: UITextField!
@@ -22,19 +20,15 @@ class DetailViewController: UIViewController {
     @IBAction func saveBtnClick(sender: UIBarButtonItem) {
         let person = personFromUI()
         // let person = personDiffFromUI()
-        
-        println("[DEBUG] Saving person with defined properties: \(person._$definedPropertyNames)")
-        
-        activity.center = self.view.center
-        view.addSubview(activity)
-        activity.startAnimating()
 
         let personService = AppDelegate.instance().personService
+
         personService.savePerson(person, completionHandler: { (person, error) -> Void in
-            self.person = person
-            dispatch_async(dispatch_get_main_queue()) {
-                self.activity.stopAnimating()
-                self.activity.removeFromSuperview()
+            if error != nil {
+                println("Save person error: \(error)")
+            }
+            else {
+                self.person = person
                 self.configureView()
             }
         })
@@ -73,16 +67,14 @@ class DetailViewController: UIViewController {
         super.viewDidLoad()
         
         if self.person!.id != nil {
-            activity.center = self.view.center
-            view.addSubview(activity)
-            activity.startAnimating()
-            
             let personService = AppDelegate.instance().personService
+
             personService.getPerson(self.person!.id!.integerValue, completionHandler: { (person, error) -> Void in
-                self.person = person
-                dispatch_async(dispatch_get_main_queue()) {
-                    self.activity.stopAnimating()
-                    self.activity.removeFromSuperview()
+                if error != nil {
+                    println("Get person error: \(error)")
+                }
+                else {
+                    self.person = person
                     self.configureView()
                 }
             })
@@ -108,7 +100,6 @@ class DetailViewController: UIViewController {
                     request,
                     queue: NSOperationQueue.mainQueue(),
                     completionHandler: {(response:NSURLResponse!, data:NSData!, error:NSError!) -> Void in
-                        
                         if data != nil && data.length > 0 {
                             let image = UIImage(data: data)
                             dispatch_async(dispatch_get_main_queue()) {
@@ -118,7 +109,8 @@ class DetailViewController: UIViewController {
                         else {
                             println("[No image data] error: \(error), response: \(response)")
                         }
-                })
+                    }
+                )
             }
         }
     }

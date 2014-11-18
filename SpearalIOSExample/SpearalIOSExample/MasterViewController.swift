@@ -9,7 +9,7 @@ import UIKit
 import SpearalIOS
 
 class MasterViewController: UITableViewController {
-
+    
     var detailViewController: DetailViewController? = nil
     var persons = NSMutableArray()
 
@@ -29,7 +29,10 @@ class MasterViewController: UITableViewController {
         
         let personService = AppDelegate.instance().personService
         personService.listPersons({ (paginatedListWrapper, error) -> Void in
-            if error == nil {
+            if error != nil {
+                println("List persons error: \(error)")
+            }
+            else {
                 var indexPaths = [NSIndexPath]()
                 
                 for person in paginatedListWrapper.list! {
@@ -37,9 +40,7 @@ class MasterViewController: UITableViewController {
                     indexPaths.append(NSIndexPath(forRow: indexPaths.count, inSection: 0))
                 }
                 
-                dispatch_async(dispatch_get_main_queue()) {
-                    self.tableView.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .None)
-                }
+                self.tableView.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .None)
             }
         })
     }
@@ -120,13 +121,11 @@ class MasterViewController: UITableViewController {
             let personService = AppDelegate.instance().personService
             personService.deletePerson(person.id!.integerValue, completionHandler: { (error) -> Void in
                 if error != nil {
-                    println(error)
+                    println("Delete person error: \(error)")
                 }
                 else {
-                    dispatch_async(dispatch_get_main_queue()) {
-                        self.persons.removeObjectAtIndex(indexPath.row)
-                        self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
-                    }
+                    self.persons.removeObjectAtIndex(indexPath.row)
+                    self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
                 }
             })
         }

@@ -23,17 +23,17 @@ class PersonService {
         let aliasStrategy = BasicSpearalAliasStrategy(localToRemoteClassNames: [
             "Person": "org.spearal.samples.springangular.data.Person",
             "PaginatedListWrapper": "org.spearal.samples.springangular.pagination.PaginatedListWrapper"
-        ])
+            ])
         aliasStrategy.setPropertiesAlias("Person", localToRemoteProperties: [
             "description_" : "description"
-        ])
+            ])
         factory.context.configure(aliasStrategy)
     }
     
     func listPersons(completionHandler: ((PaginatedListWrapper!, NSError!) -> Void)) {
         let request = createRequest("\(personUrl)?pageSize=100", method: "GET")
         // request.addValue("org.spearal.samples.springangular.data.Person#name", forHTTPHeaderField: "Spearal-PropertyFilter")
-
+        
         executeRequest(request, completionHandler: { (list:PaginatedListWrapper?, error:NSError?) -> Void in
             completionHandler(list, error)
         })
@@ -41,6 +41,7 @@ class PersonService {
     
     func getPerson(id:Int, completionHandler: ((Person!, NSError!) -> Void)) {
         let request = createRequest("\(personUrl)/\(id)", method: "GET")
+        // request.addValue("org.spearal.samples.springangular.data.Person#id,name,description,imageUrl", forHTTPHeaderField: "Spearal-PropertyFilter")
         
         executeRequest(request, completionHandler: { (person:Person?, error:NSError?) -> Void in
             completionHandler(person, error)
@@ -50,8 +51,6 @@ class PersonService {
     func savePerson(person:Person, completionHandler: ((Person!, NSError!) -> Void)) {
         let request = createRequest(personUrl, method: "POST")
         request.HTTPBody = encode(person)
-        
-        println("[DEBUG] Sending data length: \(request.HTTPBody?.length) bytes.")
         
         executeRequest(request, completionHandler: { (person:Person?, error:NSError?) -> Void in
             completionHandler(person, error)
@@ -76,21 +75,22 @@ class PersonService {
     
     func executeRequest<T>(request:NSURLRequest, completionHandler:((T?, NSError?) -> Void)) {
         let task = session.dataTaskWithRequest(request, completionHandler: {data, response, error -> Void in
-            if error != nil {
-                completionHandler(nil, error)
+            var value:T? = nil
+            var err:NSError? = nil
+            
+            if error == nil {
+                if (response as NSHTTPURLResponse).statusCode != 200 {
+                    err = NSError(domain: "Spearal", code: 1, userInfo: [
+                        NSLocalizedDescriptionKey: "HTTP Status Code: \((response as NSHTTPURLResponse).statusCode)"
+                    ])
+                }
+                else if data.length > 0 {
+                    value = self.decode(data)
+                }
             }
-            else if (response as NSHTTPURLResponse).statusCode != 200 {
-                completionHandler(nil, NSError(domain: "Spearal", code: 1, userInfo: [
-                    NSLocalizedDescriptionKey: "HTTP Status Code: \((response as NSHTTPURLResponse).statusCode)"
-                ]))
-            }
-            else if data.length <= 0 {
-                completionHandler(nil, nil)
-            }
-            else {
-                println("[DEBUG] Received data length: \(data.length) bytes.")
-                let value:T? = self.decode(data)
-                completionHandler(value, nil)
+
+            dispatch_async(dispatch_get_main_queue()) {
+                completionHandler(value, err)
             }
         })
         
@@ -98,15 +98,29 @@ class PersonService {
     }
     
     func decode<T>(data:NSData) -> T? {
-        let decoder:SpearalDecoder = self.factory.newDecoder(SpearalNSDataInput(data: data))
+        let printer = SpearalDefaultPrinter(SpearalPrinterStringOutput())
+        
+        let decoder:SpearalDecoder = self.factory.newDecoder(SpearalNSDataInput(data: data), printer: printer)
         let any = decoder.readAny()
+        
+        println("RESPONSE (data length: \(data.length) bytes)")
+        println((printer.output as SpearalPrinterStringOutput).value)
+        println("--")
+        
         return any as? T
     }
     
     func encode(any:Any) -> NSData {
-        let out = SpearalNSDataOutput()
-        let encoder = factory.newEncoder(out)
+        let printer = SpearalDefaultPrinter(SpearalPrinterStringOutput())
+        
+        let output = SpearalNSDataOutput()
+        let encoder = factory.newEncoder(output, printer: printer)
         encoder.writeAny(any)
-        return out.data
+        
+        println("REQUEST (data length: \(output.data.length) bytes)")
+        println((printer.output as SpearalPrinterStringOutput).value)
+        println("--")
+        
+        return output.data
     }
 }

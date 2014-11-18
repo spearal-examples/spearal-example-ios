@@ -1,0 +1,3 @@
+[submodule "SpearalIOS"]
+	path = SpearalIOS
+	url = https://github.com/spearal/SpearalIOS.git
