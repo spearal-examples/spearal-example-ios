@@ -74,13 +74,13 @@ class PersonService {
     }
     
     func executeRequest<T>(request:NSURLRequest, completionHandler:((T?, NSError?) -> Void)) {
-        let task = session.dataTaskWithRequest(request, completionHandler: {data, response, error -> Void in
+        let task = session.dataTaskWithRequest(request, completionHandler: {(data, response, err) -> Void in
+            var error:NSError? = err
             var value:T? = nil
-            var err:NSError? = nil
             
             if error == nil {
                 if (response as NSHTTPURLResponse).statusCode != 200 {
-                    err = NSError(domain: "Spearal", code: 1, userInfo: [
+                    error = NSError(domain: "Spearal", code: 1, userInfo: [
                         NSLocalizedDescriptionKey: "HTTP Status Code: \((response as NSHTTPURLResponse).statusCode)"
                     ])
                 }
@@ -90,7 +90,7 @@ class PersonService {
             }
 
             dispatch_async(dispatch_get_main_queue()) {
-                completionHandler(value, err)
+                completionHandler(value, error)
             }
         })
         

@@ -18,6 +18,8 @@ class DetailViewController: UIViewController {
     var person:Person?
 
     @IBAction func saveBtnClick(sender: UIBarButtonItem) {
+        view.endEditing(true)
+        
         let person = personFromUI()
         // let person = personDiffFromUI()
 
@@ -108,21 +110,36 @@ class DetailViewController: UIViewController {
             NSURLConnection.sendAsynchronousRequest(
                 request,
                 queue: NSOperationQueue.mainQueue(),
-                completionHandler: {(response, data, error) -> Void in
-                    var logError = true
+                completionHandler: {(response, data, err) -> Void in
+                    var error:NSError? = err
                     
-                    if error == nil && (response as NSHTTPURLResponse).statusCode == 200 {
-                        let image = UIImage(data: data)
-                        if image != nil {
-                            logError = false
-                            dispatch_async(dispatch_get_main_queue()) {
-                                self.imageUrlImg.image = image
+                    if error == nil {
+                        if (response as NSHTTPURLResponse).statusCode != 200 {
+                            error = NSError(domain: "LoadImage", code: 1, userInfo: [
+                                NSLocalizedDescriptionKey: "HTTP Status Code: \((response as NSHTTPURLResponse).statusCode)"
+                            ])
+                        }
+                        else if data != nil && data.length > 0 {
+                            if let image = UIImage(data: data) {
+                                dispatch_async(dispatch_get_main_queue()) {
+                                    self.imageUrlImg.image = image
+                                }
                             }
+                            else {
+                                error = NSError(domain: "LoadImage", code: 2, userInfo: [
+                                    NSLocalizedDescriptionKey: "Unsupported image data: \(data)"
+                                ])
+                            }
+                        }
+                        else {
+                            error = NSError(domain: "LoadImage", code: 3, userInfo: [
+                                NSLocalizedDescriptionKey: "Empty image data: \(data)"
+                            ])
                         }
                     }
                     
-                    if logError {
-                        println("Load image error: \(error), response: \(response), data: \(data)")
+                    if error != nil {
+                        println("Load image error (\(imageUrl)): \(error)")
                     }
                 }
             )
