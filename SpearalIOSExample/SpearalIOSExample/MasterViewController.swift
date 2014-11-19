@@ -28,19 +28,18 @@ class MasterViewController: UITableViewController {
         self.tableView.reloadData()
         
         let personService = AppDelegate.instance().personService
+
         personService.listPersons({ (paginatedListWrapper, error) -> Void in
-            if error != nil {
-                println("List persons error: \(error)")
-            }
-            else {
+            if paginatedListWrapper != nil {
                 var indexPaths = [NSIndexPath]()
-                
                 for person in paginatedListWrapper.list! {
                     self.persons.addObject(person)
                     indexPaths.append(NSIndexPath(forRow: indexPaths.count, inSection: 0))
                 }
-                
                 self.tableView.insertRowsAtIndexPaths(indexPaths, withRowAnimation: .None)
+            }
+            else {
+                println("List persons error: \(error)")
             }
         })
     }
@@ -49,16 +48,12 @@ class MasterViewController: UITableViewController {
         super.viewDidLoad()
         
         self.navigationItem.leftBarButtonItem = self.editButtonItem()
-        let addButton = UIBarButtonItem(barButtonSystemItem: .Add, target: self, action: "insertNewObject:")
-        self.navigationItem.rightBarButtonItem = addButton
+        self.navigationItem.rightBarButtonItem = UIBarButtonItem(barButtonSystemItem: .Add, target: self, action: "insertNewObject:")
+        
         if let split = self.splitViewController {
             let controllers = split.viewControllers
             self.detailViewController = controllers[controllers.count-1].topViewController as? DetailViewController
         }
-    }
-
-    override func didReceiveMemoryWarning() {
-        super.didReceiveMemoryWarning()
     }
 
     func insertNewObject(sender: AnyObject) {
@@ -69,21 +64,20 @@ class MasterViewController: UITableViewController {
 
     override func prepareForSegue(segue: UIStoryboardSegue, sender: AnyObject?) {
         if segue.identifier == "showDetail" {
+            let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
+            
+            var person:Person
             if let indexPath = self.tableView.indexPathForSelectedRow() {
-                let person = persons[indexPath.row] as Person
-                let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
-                controller.person = person
-                controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
-                controller.navigationItem.leftItemsSupplementBackButton = true
+                person = persons[indexPath.row] as Person
             }
             else {
-                let person = Person()
+                person = Person()
                 person.id = nil
-                let controller = (segue.destinationViewController as UINavigationController).topViewController as DetailViewController
-                controller.person = person
-                controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
-                controller.navigationItem.leftItemsSupplementBackButton = true
             }
+            
+            controller.person = person
+            controller.navigationItem.leftBarButtonItem = self.splitViewController?.displayModeButtonItem()
+            controller.navigationItem.leftItemsSupplementBackButton = true
         }
     }
 
@@ -116,16 +110,16 @@ class MasterViewController: UITableViewController {
 
     override func tableView(tableView: UITableView, commitEditingStyle editingStyle: UITableViewCellEditingStyle, forRowAtIndexPath indexPath: NSIndexPath) {
         if editingStyle == .Delete {
-            let person = persons[indexPath.row] as Person
-            
             let personService = AppDelegate.instance().personService
+            let person = persons[indexPath.row] as Person
+
             personService.deletePerson(person.id!.integerValue, completionHandler: { (error) -> Void in
-                if error != nil {
-                    println("Delete person error: \(error)")
-                }
-                else {
+                if error == nil {
                     self.persons.removeObjectAtIndex(indexPath.row)
                     self.tableView.deleteRowsAtIndexPaths([indexPath], withRowAnimation: .Fade)
+                }
+                else {
+                    println("Delete person error: \(error)")
                 }
             })
         }

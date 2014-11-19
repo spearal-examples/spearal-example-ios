@@ -15,7 +15,7 @@ class DetailViewController: UIViewController {
     @IBOutlet weak var imageUrlText: UITextField!
     @IBOutlet weak var imageUrlImg: UIImageView!
     
-    var person: Person?
+    var person:Person?
 
     @IBAction func saveBtnClick(sender: UIBarButtonItem) {
         let person = personFromUI()
@@ -24,12 +24,12 @@ class DetailViewController: UIViewController {
         let personService = AppDelegate.instance().personService
 
         personService.savePerson(person, completionHandler: { (person, error) -> Void in
-            if error != nil {
-                println("Save person error: \(error)")
-            }
-            else {
+            if person != nil {
                 self.person = person
                 self.configureView()
+            }
+            else {
+                println("Save person error: \(error)")
             }
         })
     }
@@ -70,12 +70,12 @@ class DetailViewController: UIViewController {
             let personService = AppDelegate.instance().personService
 
             personService.getPerson(self.person!.id!.integerValue, completionHandler: { (person, error) -> Void in
-                if error != nil {
-                    println("Get person error: \(error)")
-                }
-                else {
+                if person != nil {
                     self.person = person
                     self.configureView()
+                }
+                else {
+                    println("Get person error: \(error)")
                 }
             })
         }
@@ -85,33 +85,47 @@ class DetailViewController: UIViewController {
     }
     
     private func configureView() {
-        
         if let person = self.person {
-            
             self.nameText.text = person.name ?? ""
             self.descriptionText.text = person.description_ ?? ""
             self.imageUrlText.text = person.imageUrl ?? ""
-            
+            self.imageUrlImg.image = nil
+
             if let imageUrl = person.imageUrl {
-                let url = NSURL(string: imageUrl)!
-                let request:NSURLRequest = NSURLRequest(URL: url, cachePolicy: .ReturnCacheDataElseLoad, timeoutInterval: 5.0)
-                
-                NSURLConnection.sendAsynchronousRequest(
-                    request,
-                    queue: NSOperationQueue.mainQueue(),
-                    completionHandler: {(response:NSURLResponse!, data:NSData!, error:NSError!) -> Void in
-                        if data != nil && data.length > 0 {
-                            let image = UIImage(data: data)
+                loadImageData(imageUrl)
+            }
+        }
+    }
+    
+    private func loadImageData(imageUrl:String) {
+        let url = NSURL(string: imageUrl)
+        if url == nil {
+            println("Bad image URL error: \(imageUrl)")
+        }
+        else {
+            let request:NSURLRequest = NSURLRequest(URL: url!, cachePolicy: .ReturnCacheDataElseLoad, timeoutInterval: 5.0)
+            
+            NSURLConnection.sendAsynchronousRequest(
+                request,
+                queue: NSOperationQueue.mainQueue(),
+                completionHandler: {(response, data, error) -> Void in
+                    var logError = true
+                    
+                    if error == nil && (response as NSHTTPURLResponse).statusCode == 200 {
+                        let image = UIImage(data: data)
+                        if image != nil {
+                            logError = false
                             dispatch_async(dispatch_get_main_queue()) {
                                 self.imageUrlImg.image = image
                             }
                         }
-                        else {
-                            println("[No image data] error: \(error), response: \(response)")
-                        }
                     }
-                )
-            }
+                    
+                    if logError {
+                        println("Load image error: \(error), response: \(response), data: \(data)")
+                    }
+                }
+            )
         }
     }
 }
