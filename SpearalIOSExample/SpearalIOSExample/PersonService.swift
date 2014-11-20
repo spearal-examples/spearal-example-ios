@@ -23,10 +23,10 @@ class PersonService {
         let aliasStrategy = BasicSpearalAliasStrategy(localToRemoteClassNames: [
             "Person": "org.spearal.samples.springangular.data.Person",
             "PaginatedListWrapper": "org.spearal.samples.springangular.pagination.PaginatedListWrapper"
-            ])
+        ])
         aliasStrategy.setPropertiesAlias("Person", localToRemoteProperties: [
             "description_" : "description"
-            ])
+        ])
         factory.context.configure(aliasStrategy)
     }
     
